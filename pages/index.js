@@ -1,8 +1,6 @@
-// pages/index.js
-
 import dynamic from 'next/dynamic'
 
-// carrega só no cliente, sem SSR
+// só roda no cliente, evita SSR quebrar o initialValue
 const RichTextEditor = dynamic(
   () => import('../components/RichTextEditor'),
   { ssr: false }
