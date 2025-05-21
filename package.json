@@ -12,7 +12,6 @@
     "react-dom": "^18.2.0",
     "@tiptap/react": "^2.0.0",
     "@tiptap/starter-kit": "^2.0.0",
-    "@ckeditor/ckeditor5-react": "^6.0.0",
-    "@ckeditor/ckeditor5-build-classic": "^36.0.1"
+    "react-quill": "^2.0.0"
   }
 }
