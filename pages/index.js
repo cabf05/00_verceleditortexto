@@ -2,21 +2,11 @@
 
 import React, { useCallback, useMemo, useState } from 'react'
 import isHotkey from 'is-hotkey'
-import {
-  Editor,
-  Element as SlateElement,
-  Transforms,
-  createEditor,
-} from 'slate'
+import { Editor, Element as SlateElement, Transforms, createEditor } from 'slate'
 import { withHistory } from 'slate-history'
-import {
-  Slate,
-  Editable,
-  useSlate,
-  withReact,
-} from 'slate-react'
+import { Slate, Editable, useSlate, withReact } from 'slate-react'
 
-// atalhos, listas e alinhamentos
+// --- atalhos e tipos de lista / alinhamento
 const HOTKEYS = {
   'mod+b': 'bold',
   'mod+i': 'italic',
@@ -26,15 +16,54 @@ const HOTKEYS = {
 const LIST_TYPES = ['numbered-list', 'bulleted-list']
 const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify']
 
+// --- valor inicial do editor
+const initialValue = [
+  {
+    type: 'paragraph',
+    children: [
+      { text: 'This is editable ' },
+      { text: 'rich', bold: true },
+      { text: ' text, ' },
+      { text: 'much', italic: true },
+      { text: ' better than a ' },
+      { text: '<textarea>', code: true },
+      { text: '!' },
+    ],
+  },
+  {
+    type: 'paragraph',
+    children: [
+      {
+        text:
+          "Since it's rich text, you can do things like turn a selection of text ",
+      },
+      { text: 'bold', bold: true },
+      {
+        text:
+          ', or add a semantically rendered block quote in the middle of the page, like this:',
+      },
+    ],
+  },
+  {
+    type: 'block-quote',
+    children: [{ text: 'A wise quote.' }],
+  },
+  {
+    type: 'paragraph',
+    align: 'center',
+    children: [{ text: 'Try it out for yourself!' }],
+  },
+]
+
 export default function RichTextPage() {
   const editor = useMemo(() => withHistory(withReact(createEditor())), [])
   const [value, setValue] = useState(initialValue)
-  const [rawInput, setRawInput] = useState('') // texto bruto para importar
+  const [rawInput, setRawInput] = useState('') // para importar texto marcado
 
   const renderElement = useCallback(props => <Element {...props} />, [])
   const renderLeaf = useCallback(props => <Leaf {...props} />, [])
 
-  // converte HTML-like -> nós Slate
+  // --- importa HTML-like para Slate nodes
   const deserialize = html => {
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
@@ -72,16 +101,13 @@ export default function RichTextPage() {
       }
     }
 
-    const nodes = Array.from(body.childNodes)
-      .map(walk)
-      .flat()
-
+    const nodes = Array.from(body.childNodes).map(walk).flat()
     return nodes.length > 0 ? nodes : initialValue
   }
 
-  // converte nós Slate -> HTML-like
-  const serialize = nodes => {
-    return nodes
+  // --- exporta Slate nodes para HTML-like
+  const serialize = nodes =>
+    nodes
       .map(n => {
         if (SlateElement.isElement(n)) {
           const children = serialize(n.children)
@@ -112,20 +138,22 @@ export default function RichTextPage() {
         }
       })
       .join('')
-  }
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '2rem' }}>
-      {/* importação */}
+      {/* textarea para importar o markup */}
       <textarea
         value={rawInput}
         onChange={e => setRawInput(e.target.value)}
         placeholder="Cole aqui seu texto HTML-like..."
-        style={{ width: '100%', height: 120, marginBottom: 8 }}
+        style={{
+          width: '100%',
+          height: 120,
+          marginBottom: 8,
+          fontFamily: 'monospace',
+        }}
       />
-      <button onClick={() => setValue(deserialize(rawInput))}>
-        Load
-      </button>
+      <button onClick={() => setValue(deserialize(rawInput))}>Load</button>
       <button
         onClick={() => {
           const out = serialize(value)
@@ -167,14 +195,19 @@ export default function RichTextPage() {
               }
             }
           }}
-          style={{ minHeight: 200, padding: '1rem', border: '1px solid #ddd' }}
+          style={{
+            minHeight: 200,
+            padding: '1rem',
+            border: '1px solid #ddd',
+            borderRadius: 4,
+          }}
         />
       </Slate>
     </div>
   )
 }
 
-// — utilitários Slate —
+// ——— utilitários de formatação ———
 
 const toggleBlock = (editor, format) => {
   const isActive = isBlockActive(
@@ -206,11 +239,7 @@ const toggleBlock = (editor, format) => {
 
 const toggleMark = (editor, format) => {
   const isActive = isMarkActive(editor, format)
-  if (isActive) {
-    Editor.removeMark(editor, format)
-  } else {
-    Editor.addMark(editor, format, true)
-  }
+  isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true)
 }
 
 const isBlockActive = (editor, format, blockType = 'type') => {
@@ -219,14 +248,10 @@ const isBlockActive = (editor, format, blockType = 'type') => {
   const [match] = Array.from(
     Editor.nodes(editor, {
       at: Editor.unhangRange(editor, selection),
-      match: n => {
-        if (!Editor.isEditor(n) && SlateElement.isElement(n)) {
-          return blockType === 'align'
-            ? n.align === format
-            : n.type === format
-        }
-        return false
-      },
+      match: n =>
+        !Editor.isEditor(n) &&
+        SlateElement.isElement(n) &&
+        (blockType === 'align' ? n.align === format : n.type === format),
     })
   )
   return !!match
@@ -237,7 +262,7 @@ const isMarkActive = (editor, format) => {
   return marks ? marks[format] === true : false
 }
 
-// — componentes de renderização —
+// ——— componentes de renderização ———
 
 const Element = ({ attributes, children, element }) => {
   const style = element.align ? { textAlign: element.align } : {}
@@ -248,10 +273,10 @@ const Element = ({ attributes, children, element }) => {
       return <h1 style={style} {...attributes}>{children}</h1>
     case 'heading-two':
       return <h2 style={style} {...attributes}>{children}</h2>
-    case 'bulleted-list':
-      return <ul style={style} {...attributes}>{children}</ul>
     case 'numbered-list':
       return <ol style={style} {...attributes}>{children}</ol>
+    case 'bulleted-list':
+      return <ul style={style} {...attributes}>{children}</ul>
     case 'list-item':
       return <li style={style} {...attributes}>{children}</li>
     default:
@@ -267,25 +292,34 @@ const Leaf = ({ attributes, children, leaf }) => {
   return <span {...attributes}>{children}</span>
 }
 
-// — botões e toolbar —
+// ——— botões e toolbar ———
 
 const Button = ({ active, ...props }) => (
   <button
     style={{
       marginRight: 4,
       padding: '4px 8px',
-      background: active ? '#ddd' : 'white',
+      background: active ? '#eee' : 'white',
       border: '1px solid #ccc',
+      borderRadius: 4,
       cursor: 'pointer',
     }}
     {...props}
   />
 )
 
-const Icon = ({ children }) => <span>{children}</span>
+const Icon = ({ children }) => <span style={{ userSelect: 'none' }}>{children}</span>
 
 const Toolbar = ({ children }) => (
-  <div style={{ borderBottom: '2px solid #eee', marginBottom: 8, paddingBottom: 4 }}>
+  <div
+    style={{
+      borderBottom: '2px solid #eee',
+      marginBottom: 8,
+      paddingBottom: 4,
+      display: 'flex',
+      flexWrap: 'wrap',
+    }}
+  >
     {children}
   </div>
 )
@@ -323,37 +357,3 @@ const MarkButton = ({ format, icon }) => {
     </Button>
   )
 }
-
-// — valor inicial — 
-
-const initialValue = [
-  {
-    type: 'paragraph',
-    children: [
-      { text: 'This is editable ' },
-      { text: 'rich', bold: true },
-      { text: ' text, ' },
-      { text: 'much', italic: true },
-      { text: ' better than a ' },
-      { text: '<textarea>', code: true },
-      { text: '!' },
-    ],
-  },
-  {
-    type: 'paragraph',
-    children: [
-      { text: "Since it's rich text, you can do things like turn a selection of text " },
-      { text: 'bold', bold: true },
-      { text: ', or add a semantically rendered block quote in the middle of the page, like this:' },
-    ],
-  },
-  {
-    type: 'block-quote',
-    children: [{ text: 'A wise quote.' }],
-  },
-  {
-    type: 'paragraph',
-    align: 'center',
-    children: [{ text: 'Try it out for yourself!' }],
-  },
-]
