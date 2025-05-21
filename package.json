@@ -1,5 +1,5 @@
 {
-  "name": "tiptap-richtext-nextjs",
+  "name": "richtext-nextjs-editors",
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev -p 3000",
@@ -11,6 +11,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@tiptap/react": "^2.0.0",
-    "@tiptap/starter-kit": "^2.0.0"
+    "@tiptap/starter-kit": "^2.0.0",
+    "@ckeditor/ckeditor5-react": "^6.0.0",
+    "@ckeditor/ckeditor5-build-classic": "^36.0.1"
   }
 }
