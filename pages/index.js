@@ -1,22 +1,11 @@
-// pages/index.js
-
+// 1) Imports
 import React, { useCallback, useMemo, useState } from 'react'
 import isHotkey from 'is-hotkey'
-import { Editor, Element as SlateElement, Transforms, createEditor } from 'slate'
+import { createEditor, Transforms, Editor, Element as SlateElement } from 'slate'
 import { withHistory } from 'slate-history'
 import { Slate, Editable, useSlate, withReact } from 'slate-react'
 
-// --- atalhos e tipos de lista / alinhamento
-const HOTKEYS = {
-  'mod+b': 'bold',
-  'mod+i': 'italic',
-  'mod+u': 'underline',
-  'mod+`': 'code',
-}
-const LIST_TYPES = ['numbered-list', 'bulleted-list']
-const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify']
-
-// --- valor inicial do editor
+// 2) initialValue (sempre antes de “export default function RichTextPage”!)
 const initialValue = [
   {
     type: 'paragraph',
@@ -55,85 +44,64 @@ const initialValue = [
   },
 ]
 
+// 3) Componente principal
 export default function RichTextPage() {
+  // configura o editor com React + History
   const editor = useMemo(() => withHistory(withReact(createEditor())), [])
+  // estado do conteúdo do editor
   const [value, setValue] = useState(initialValue)
-  const [rawInput, setRawInput] = useState('') // para importar texto marcado
+  // estado do texto bruto para importar
+  const [rawInput, setRawInput] = useState('')
 
   const renderElement = useCallback(props => <Element {...props} />, [])
   const renderLeaf = useCallback(props => <Leaf {...props} />, [])
 
-  // --- importa HTML-like para Slate nodes
+  // converte HTML-like para nodes do Slate
   const deserialize = html => {
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
-    const { body } = doc
-
     const walk = node => {
-      if (node.nodeType === 3) {
-        return { text: node.textContent }
-      }
+      if (node.nodeType === 3) return { text: node.textContent }
       const children = Array.from(node.childNodes).map(walk).flat()
-
       switch (node.nodeName) {
-        case 'STRONG':
-          return children.map(n => ({ ...n, bold: true }))
-        case 'EM':
-          return children.map(n => ({ ...n, italic: true }))
-        case 'U':
-          return children.map(n => ({ ...n, underline: true }))
-        case 'CODE':
-          return children.map(n => ({ ...n, code: true }))
-        case 'BLOCKQUOTE':
-          return [{ type: 'block-quote', children }]
-        case 'H1':
-          return [{ type: 'heading-one', children }]
-        case 'H2':
-          return [{ type: 'heading-two', children }]
-        case 'UL':
-          return [{ type: 'bulleted-list', children }]
-        case 'OL':
-          return [{ type: 'numbered-list', children }]
-        case 'LI':
-          return [{ type: 'list-item', children }]
-        default:
-          return [{ type: 'paragraph', children }]
+        case 'STRONG':   return children.map(n => ({ ...n, bold: true }))
+        case 'EM':       return children.map(n => ({ ...n, italic: true }))
+        case 'U':        return children.map(n => ({ ...n, underline: true }))
+        case 'CODE':     return children.map(n => ({ ...n, code: true }))
+        case 'BLOCKQUOTE': return [{ type: 'block-quote', children }]
+        case 'H1':       return [{ type: 'heading-one', children }]
+        case 'H2':       return [{ type: 'heading-two', children }]
+        case 'UL':       return [{ type: 'bulleted-list', children }]
+        case 'OL':       return [{ type: 'numbered-list', children }]
+        case 'LI':       return [{ type: 'list-item', children }]
+        default:         return [{ type: 'paragraph', children }]
       }
     }
-
-    const nodes = Array.from(body.childNodes).map(walk).flat()
-    return nodes.length > 0 ? nodes : initialValue
+    const nodes = Array.from(doc.body.childNodes).map(walk).flat()
+    return nodes.length ? nodes : initialValue
   }
 
-  // --- exporta Slate nodes para HTML-like
+  // converte nodes do Slate de volta para HTML-like
   const serialize = nodes =>
     nodes
       .map(n => {
         if (SlateElement.isElement(n)) {
           const children = serialize(n.children)
           switch (n.type) {
-            case 'block-quote':
-              return `<blockquote>${children}</blockquote>`
-            case 'heading-one':
-              return `<h1>${children}</h1>`
-            case 'heading-two':
-              return `<h2>${children}</h2>`
-            case 'bulleted-list':
-              return `<ul>${children}</ul>`
-            case 'numbered-list':
-              return `<ol>${children}</ol>`
-            case 'list-item':
-              return `<li>${children}</li>`
-            case 'paragraph':
-            default:
-              return `<p>${children}</p>`
+            case 'block-quote':     return `<blockquote>${children}</blockquote>`
+            case 'heading-one':     return `<h1>${children}</h1>`
+            case 'heading-two':     return `<h2>${children}</h2>`
+            case 'numbered-list':   return `<ol>${children}</ol>`
+            case 'bulleted-list':   return `<ul>${children}</ul>`
+            case 'list-item':       return `<li>${children}</li>`
+            default:                return `<p>${children}</p>`
           }
         } else {
           let text = n.text
-          if (n.bold) text = `<strong>${text}</strong>`
-          if (n.italic) text = `<em>${text}</em>`
+          if (n.bold)      text = `<strong>${text}</strong>`
+          if (n.italic)    text = `<em>${text}</em>`
           if (n.underline) text = `<u>${text}</u>`
-          if (n.code) text = `<code>${text}</code>`
+          if (n.code)      text = `<code>${text}</code>`
           return text
         }
       })
@@ -141,17 +109,12 @@ export default function RichTextPage() {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '2rem' }}>
-      {/* textarea para importar o markup */}
+      {/* textarea para importar */}
       <textarea
         value={rawInput}
         onChange={e => setRawInput(e.target.value)}
         placeholder="Cole aqui seu texto HTML-like..."
-        style={{
-          width: '100%',
-          height: 120,
-          marginBottom: 8,
-          fontFamily: 'monospace',
-        }}
+        style={{ width: '100%', height: 120, marginBottom: 8, fontFamily: 'monospace' }}
       />
       <button onClick={() => setValue(deserialize(rawInput))}>Load</button>
       <button
@@ -165,21 +128,14 @@ export default function RichTextPage() {
       </button>
 
       {/* editor Slate */}
-      <Slate editor={editor} value={value} onChange={newVal => setValue(newVal)}>
+      <Slate editor={editor} value={value} onChange={setValue}>
         <Toolbar>
-          <MarkButton format="bold" icon="B" />
-          <MarkButton format="italic" icon="I" />
-          <MarkButton format="underline" icon="U" />
-          <MarkButton format="code" icon="⌃" />
-          <BlockButton format="heading-one" icon="H1" />
-          <BlockButton format="heading-two" icon="H2" />
-          <BlockButton format="block-quote" icon="❝" />
-          <BlockButton format="numbered-list" icon="1." />
-          <BlockButton format="bulleted-list" icon="•" />
-          <BlockButton format="left" icon="←" />
-          <BlockButton format="center" icon="↔" />
-          <BlockButton format="right" icon="→" />
-          <BlockButton format="justify" icon="☰" />
+          {/* botões de formatação */}
+          {'bold italic underline code heading-one heading-two block-quote numbered-list bulleted-list left center right justify'.split(' ').map(f => {
+            const Icon = { bold: 'B', italic: 'I', underline: 'U', code: '⌃', 'heading-one': 'H1', 'heading-two': 'H2', 'block-quote': '❝', 'numbered-list': '1.', 'bulleted-list': '•', left: '←', center: '↔', right: '→', justify: '☰' }[f]
+            const ButtonComp = f.includes('-') ? BlockButton : MarkButton
+            return <ButtonComp key={f} format={f} icon={Icon} />
+          })}
         </Toolbar>
         <Editable
           renderElement={renderElement}
@@ -187,20 +143,15 @@ export default function RichTextPage() {
           placeholder="Digite aqui…"
           spellCheck
           autoFocus
-          onKeyDown={event => {
+          onKeyDown={e => {
             for (const hotkey in HOTKEYS) {
-              if (isHotkey(hotkey, event)) {
-                event.preventDefault()
+              if (isHotkey(hotkey, e)) {
+                e.preventDefault()
                 toggleMark(editor, HOTKEYS[hotkey])
               }
             }
           }}
-          style={{
-            minHeight: 200,
-            padding: '1rem',
-            border: '1px solid #ddd',
-            borderRadius: 4,
-          }}
+          style={{ minHeight: 200, padding: '1rem', border: '1px solid #ddd', borderRadius: 4 }}
         />
       </Slate>
     </div>
@@ -210,13 +161,8 @@ export default function RichTextPage() {
 // ——— utilitários de formatação ———
 
 const toggleBlock = (editor, format) => {
-  const isActive = isBlockActive(
-    editor,
-    format,
-    TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type'
-  )
+  const isActive = isBlockActive(editor, format, TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type')
   const isList = LIST_TYPES.includes(format)
-
   Transforms.unwrapNodes(editor, {
     match: n =>
       !Editor.isEditor(n) &&
@@ -225,20 +171,15 @@ const toggleBlock = (editor, format) => {
       !TEXT_ALIGN_TYPES.includes(format),
     split: true,
   })
-
   const newProps = TEXT_ALIGN_TYPES.includes(format)
     ? { align: isActive ? undefined : format }
     : { type: isActive ? 'paragraph' : isList ? 'list-item' : format }
-
   Transforms.setNodes(editor, newProps)
-
-  if (!isActive && isList) {
-    Transforms.wrapNodes(editor, { type: format, children: [] })
-  }
+  if (!isActive && isList) Transforms.wrapNodes(editor, { type: format, children: [] })
 }
 
 const toggleMark = (editor, format) => {
-  const isActive = isMarkActive(editor, format)
+  const isActive = Editor.marks(editor)?.[format] === true
   isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true)
 }
 
@@ -248,10 +189,7 @@ const isBlockActive = (editor, format, blockType = 'type') => {
   const [match] = Array.from(
     Editor.nodes(editor, {
       at: Editor.unhangRange(editor, selection),
-      match: n =>
-        !Editor.isEditor(n) &&
-        SlateElement.isElement(n) &&
-        (blockType === 'align' ? n.align === format : n.type === format),
+      match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && (blockType === 'align' ? n.align === format : n.type === format),
     })
   )
   return !!match
@@ -262,37 +200,30 @@ const isMarkActive = (editor, format) => {
   return marks ? marks[format] === true : false
 }
 
-// ——— componentes de renderização ———
+// ——— Componentes de renderização ———
 
 const Element = ({ attributes, children, element }) => {
   const style = element.align ? { textAlign: element.align } : {}
   switch (element.type) {
-    case 'block-quote':
-      return <blockquote style={style} {...attributes}>{children}</blockquote>
-    case 'heading-one':
-      return <h1 style={style} {...attributes}>{children}</h1>
-    case 'heading-two':
-      return <h2 style={style} {...attributes}>{children}</h2>
-    case 'numbered-list':
-      return <ol style={style} {...attributes}>{children}</ol>
-    case 'bulleted-list':
-      return <ul style={style} {...attributes}>{children}</ul>
-    case 'list-item':
-      return <li style={style} {...attributes}>{children}</li>
-    default:
-      return <p style={style} {...attributes}>{children}</p>
+    case 'block-quote':     return <blockquote style={style} {...attributes}>{children}</blockquote>
+    case 'heading-one':     return <h1 style={style} {...attributes}>{children}</h1>
+    case 'heading-two':     return <h2 style={style} {...attributes}>{children}</h2>
+    case 'numbered-list':   return <ol style={style} {...attributes}>{children}</ol>
+    case 'bulleted-list':   return <ul style={style} {...attributes}>{children}</ul>
+    case 'list-item':       return <li style={style} {...attributes}>{children}</li>
+    default:                return <p style={style} {...attributes}>{children}</p>
   }
 }
 
 const Leaf = ({ attributes, children, leaf }) => {
-  if (leaf.bold) children = <strong>{children}</strong>
-  if (leaf.code) children = <code>{children}</code>
-  if (leaf.italic) children = <em>{children}</em>
+  if (leaf.bold)      children = <strong>{children}</strong>
+  if (leaf.code)      children = <code>{children}</code>
+  if (leaf.italic)    children = <em>{children}</em>
   if (leaf.underline) children = <u>{children}</u>
   return <span {...attributes}>{children}</span>
 }
 
-// ——— botões e toolbar ———
+// ——— Botões e Toolbar ———
 
 const Button = ({ active, ...props }) => (
   <button
@@ -311,15 +242,7 @@ const Button = ({ active, ...props }) => (
 const Icon = ({ children }) => <span style={{ userSelect: 'none' }}>{children}</span>
 
 const Toolbar = ({ children }) => (
-  <div
-    style={{
-      borderBottom: '2px solid #eee',
-      marginBottom: 8,
-      paddingBottom: 4,
-      display: 'flex',
-      flexWrap: 'wrap',
-    }}
-  >
+  <div style={{ borderBottom: '2px solid #eee', marginBottom: 8, paddingBottom: 4, display: 'flex', flexWrap: 'wrap' }}>
     {children}
   </div>
 )
@@ -328,11 +251,7 @@ const BlockButton = ({ format, icon }) => {
   const editor = useSlate()
   return (
     <Button
-      active={isBlockActive(
-        editor,
-        format,
-        TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type'
-      )}
+      active={isBlockActive(editor, format, TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type')}
       onMouseDown={e => {
         e.preventDefault()
         toggleBlock(editor, format)
