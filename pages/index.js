@@ -1,14 +1,14 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-// Seleção de editor: 'tiptap' ou 'ckeditor'
+// Escolha de editor: TipTap ou ReactQuill
 export default function Home() {
   const [editorType, setEditorType] = useState('tiptap');
   const EditorComponent = dynamic(
     () =>
       editorType === 'tiptap'
         ? import('../components/TiptapEditor')
-        : import('../components/CkeditorEditor'),
+        : import('../components/QuillEditor'),
     { ssr: false }
   );
 
@@ -20,7 +20,7 @@ export default function Home() {
         style={{ marginBottom: 16, padding: 4 }}
       >
         <option value="tiptap">TipTap</option>
-        <option value="ckeditor">CKEditor 5</option>
+        <option value="quill">React Quill</option>
       </select>
       <EditorComponent />
     </div>
