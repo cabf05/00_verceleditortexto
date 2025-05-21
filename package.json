@@ -7,12 +7,12 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
-    "is-hotkey": "^0.2.0",
     "next": "^13.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "slate": "^0.93.0",
-    "slate-history": "^0.70.0",
-    "slate-react": "^0.73.0"
+    "is-hotkey": "^0.2.0",
+    "slate": "^0.114.0",           /* npm i slate@^0.114.0  [oai_citation_attribution:0‡npm](https://www.npmjs.com/package/slate?utm_source=chatgpt.com) */
+    "slate-react": "^0.114.2",     /* npm i slate-react@^0.114.2  [oai_citation_attribution:1‡npm](https://www.npmjs.com/package/slate-react?utm_source=chatgpt.com) */
+    "slate-history": "^0.113.1"    /* npm i slate-history@^0.113.1  [oai_citation_attribution:2‡npm](https://www.npmjs.com/package/slate-history?utm_source=chatgpt.com) */
   }
 }
